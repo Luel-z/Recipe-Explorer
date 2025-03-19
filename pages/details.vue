@@ -114,11 +114,8 @@ watchEffect(() => {
 });
 
 const currentImage = ref(0);
-const images = [
-  "/images/details0.jpg",
-  "/images/details1.jpg",
-  "/images/details2.jpg",
-];
+const defaultImage = "https://cdn.dribbble.com/userupload/22570626/file/original-379b4978ee41eeb352e0ddacbaa6df96.jpg?resize=800x600&vertical=center";
+const images = recipe.images && recipe.images.length > 0 ? recipe.images : [defaultImage];
 
 const prevImage = () => {
   currentImage.value = (currentImage.value - 1 + images.length) % images.length;

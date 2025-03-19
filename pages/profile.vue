@@ -3,7 +3,7 @@
     <div class="max-w-4xl mx-auto bg-white shadow-md rounded-2xl p-6">
       <div class="flex items-center gap-6 border-b border-gray-300 pb-6">
         <img
-          :src="AggregateDataResult?.users[0]?.profile ? AggregateDataResult.users[0].profile : '/public/images/person.jpeg'"
+          :src="AggregateDataResult?.users[0]?.profile ? AggregateDataResult.users[0].profile : 'https://as1.ftcdn.net/jpg/06/33/54/78/1000_F_633547842_AugYzexTpMJ9z1YcpTKUBoqBF0CUCk10.webp'"
           alt="Profile Picture" class="w-36 h-36 rounded-full border-4 border-gray-300" />
         <div class="border-l-2 border-gray-300 h-36"></div>
 
@@ -46,12 +46,13 @@
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-8">
-        <div v-for="(image, index) in images" :key="image.id"
+        <div v-for="(recipe, index) in RecipeByUserResult?.recipes" :key="recipe.id"
           class="aspect-w-1 aspect-h-1 overflow-hidden rounded-lg shadow cursor-pointer"
-          @click="redirectToUpdateRecipe(RecipeByUserResult?.recipes[index]?.id)">
-          <img :src="image.src" :alt="image.alt" class="w-full h-full object-cover" />
+          @click="redirectToUpdateRecipe(recipe.id)">
+          <img :src="recipe.images && recipe.images.length > 0 ? recipe.images[0] : defaultImage" :alt="recipe.title"
+            class="w-full h-full object-cover" />
           <div class="text-center mt-2 text-sm font-medium text-gray-700">
-            {{ RecipeByUserResult?.recipes[index]?.title }}
+            {{ recipe.title }}
           </div>
         </div>
       </div>
@@ -81,6 +82,8 @@ try {
 
 const { result: RecipeByUserResult, loading: RecipeByUserLoading, error: RecipeByUserError, refetch } = useRecipeByUser(userID);
 const { result: AggregateDataResult, loading: AggregateDataLoading, error: AggregateDataError } = useAggregateData(userID);
+const defaultImage = "https://cdn.dribbble.com/userupload/22570626/file/original-379b4978ee41eeb352e0ddacbaa6df96.jpg?resize=800x600&vertical=center";
+
 
 const router = useRouter();
 const redirectToUpdateRecipe = (recipeId) => {
@@ -88,14 +91,6 @@ const redirectToUpdateRecipe = (recipeId) => {
     router.push({ path: '/update-recipe', query: { recipeId: recipeId } });
   }
 };
-const images = [
-  { id: 1, src: "images/recipe1.jpeg", alt: "Dish 1" },
-  { id: 2, src: "images/recipe2.jpeg", alt: "Dish 2" },
-  { id: 3, src: "images/recipe3.jpeg", alt: "Dish 3" },
-  { id: 4, src: "images/details0.jpg", alt: "Dish 4" },
-  { id: 5, src: "images/details1.jpg", alt: "Dish 5" },
-  { id: 6, src: "images/details2.jpg", alt: "Dish 6" },
-];
 </script>
 
 <style scoped>

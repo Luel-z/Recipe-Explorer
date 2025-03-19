@@ -70,8 +70,8 @@
                                         </span>
                                     </div>
 
-                                    <img :src="recipe.image" alt="Recipe Image"
-                                        class="w-full h-48 object-cover rounded-md" />
+                                    <img :src="recipe.image[0] ? recipe.image[0] : 'https://cdn.dribbble.com/userupload/22570626/file/original-379b4978ee41eeb352e0ddacbaa6df96.jpg?resize=800x600&vertical=center'"
+                                        alt="Recipe Image" class="w-full h-48 object-cover rounded-md" />
 
                                     <h2 class="text-lg font-bold mt-3">{{ recipe.title }}</h2>
                                     <p class="text-gray-600 text-sm">By {{ recipe.author }} in {{ recipe.category }}</p>

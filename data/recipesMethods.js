@@ -73,11 +73,11 @@ export const computedProperties = {
             title: recipe.title,
             author: recipe.user.username,
             category: recipe.category.name,
-            image: 'https://images.immediate.co.uk/production/volatile/sites/30/2020/08/chorizo-mozarella-gnocchi-bake-cropped-9ab73a3.jpg?quality=90&webp=true&resize=700,636',
+            image: recipe.images,
             likes: recipe.likes_aggregate.aggregate.count,
             comments: recipe.comments_aggregate.aggregate.count,
             rating: recipe.ratings_aggregate.aggregate.avg.rating || 0,
-            isBookmarked: recipe.bookmarks[0] ? recipe.bookmarks[0] : false
+            isBookmarked: recipe.bookmarks[0] ? recipe.bookmarks[0] : false,
         }));
     },
 

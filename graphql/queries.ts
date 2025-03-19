@@ -8,6 +8,7 @@ export const GET_LATEST_RECIPES = gql`
       description
       preparation_time
       category_id
+      images
       user {
         id
         username
@@ -76,6 +77,7 @@ export const GET_RECIPES = gql`
       title
       description
       preparation_time
+      images
       user {
         id
         username
@@ -130,6 +132,7 @@ export const GET_RECIPES_TITLE = gql`
     recipes(where: {user_id: {_eq: $userId}}) {
       id,  
       title,
+      images
     }
   }
 `;
