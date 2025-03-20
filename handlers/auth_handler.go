@@ -78,13 +78,11 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	fileData, err := base64.StdEncoding.DecodeString(req.RegisterInput.Profile)
 	if err != nil {
-		//console.log("Error decoding base64 data: " + err)
 		return 
 	}
 
 	profileURL, err := services.UploadToS3(fileData, "profile-"+req.RegisterInput.Email+".jpg")
 	if err != nil {
-		//console.log("Error uploading profile picture:" + err)
 		http.Error(w, "Unable to upload profile picture", http.StatusInternalServerError)
 		return
 	}

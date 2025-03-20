@@ -82,6 +82,7 @@ export const UPDATE_RECIPE_MUTATION = gql`
     $description: String
     $preparation_time: Int
     $categories: uuid
+    $images: [String!]!
     $user_id: uuid
     $ingredients: [ingredients_insert_input!]!
     $steps: [recipe_steps_insert_input!]!
@@ -94,6 +95,7 @@ export const UPDATE_RECIPE_MUTATION = gql`
         preparation_time: $preparation_time
         category_id: $categories
         user_id: $user_id
+        images: $images
       }
     ) {
       returning {

@@ -53,7 +53,6 @@ import { ref } from 'vue';
 import { useMutation } from '@vue/apollo-composable';
 import { REGISTER_MUTATION } from "@/graphql/mutations";
 
-
 const name = ref('');
 const email = ref('');
 const password = ref('');

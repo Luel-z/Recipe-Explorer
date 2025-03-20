@@ -1,4 +1,5 @@
 <template>
+
   <div class="text-left pl-25 sm:pl-10 lg:pl-25">
     <h1 class="text-4xl font-bold text-gray-800">
       <span class="text-orange-600">Update</span>
@@ -104,13 +105,18 @@
       </div>
 
       <div class="flex justify-end space-x-4 mt-8">
-        <button @click="deleterecipe"
-          class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
-          Delete
+        <button @click="deleterecipe" :disabled="uploadLoading"
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 flex items-center justify-center min-w-[80px]">
+          <span v-if="uploadLoading"
+            class="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-gray-700"></span>
+          <span v-else>Delete</span>
         </button>
-        <button @click="updaterecipe"
-          class="px-4 py-2 text-sm font-medium text-gray-700 bg-orange-600 rounded-md hover:bg-orange-600">
-          Update
+
+        <button @click="updaterecipe" :disabled="uploadLoading"
+          class="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700 flex items-center justify-center min-w-[80px]">
+          <span v-if="uploadLoading"
+            class="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></span>
+          <span v-else>Update</span>
         </button>
       </div>
     </div>
@@ -118,13 +124,14 @@
 </template>
 
 <script setup>
+
 definePageMeta({
   middleware: 'auth'
 })
 
 import { ref, watchEffect } from "vue";
 import { useMutation } from "@vue/apollo-composable";
-import { DELETE_RECIPE_MUTATION, UPDATE_RECIPE_MUTATION } from "@/graphql/mutations";
+import { DELETE_RECIPE_MUTATION, UPDATE_RECIPE_MUTATION, UPLOAD_MUTATION } from "@/graphql/mutations";
 import { useRecipes, useCategories } from '../composables/RecipesQuery';
 import { useRouter, useRoute } from "vue-router";
 import { methods } from "../data/recipesMethods.js";
@@ -137,9 +144,12 @@ const userID = methods.getUserIdFromToken();
 const { result: recipesResult, loading: recipesLoading, error: recipesError } = useRecipes(recipeId);
 const { mutate: UpdateRecipe } = useMutation(UPDATE_RECIPE_MUTATION);
 const { mutate: DeleteRecipe } = useMutation(DELETE_RECIPE_MUTATION);
+const { mutate: UploadImage, error } = useMutation(UPLOAD_MUTATION);
 const { result: categoryResult, loading: categoryLoading, error: categoryError } = useCategories();
 
+const uploadLoading = ref(false);
 const predefinedCategories = ref([]);
+const newImageFiles = ref([]);
 const recipe = ref({
   name: "",
   description: "",
@@ -167,7 +177,10 @@ watchEffect(() => {
       recipe.value.ingredients = fetchedRecipe.ingredients.map(ingredient => ingredient.ingredient_name);
       recipe.value.instructions = fetchedRecipe.steps.map(step => step.description);
       recipe.value.categories = fetchedRecipe.category.id;
-      recipe.value.images = [];
+      const defaultImage = "https://cdn.dribbble.com/userupload/22570626/file/original-379b4978ee41eeb352e0ddacbaa6df96.jpg?resize=800x600&vertical=center";
+      recipe.value.images = (fetchedRecipe.images && fetchedRecipe.images.length > 0)
+        ? fetchedRecipe.images
+        : [defaultImage];
       recipe.value.fetchedid = fetchedRecipe.user.id;
     }
   }
@@ -179,7 +192,52 @@ const addInstruction = () => recipe.value.instructions.push("");
 const removeInstruction = (index) => recipe.value.instructions.splice(index, 1);
 const removeImage = (index) => recipe.value.images.splice(index, 1);
 const handleMultipleImageUpload = (event) => {
+  const files = event.target.files;
+  if (!files.length) return;
 
+  uploadLoading.value = true;
+
+  const fileReadPromises = Array.from(files).map(file => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64Data = e.target.result.split(',')[1];
+        resolve(base64Data);
+      };
+      reader.onerror = () => {
+        reject("Error Occurred While Encoding Image");
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  Promise.all(fileReadPromises)
+    .then(base64Files => {
+      newImageFiles.value.push(...base64Files);
+      initateUpload();
+    })
+    .catch(error => {
+      console.error(error);
+      uploadLoading.value = false;
+    });
+};
+
+const initateUpload = async () => {
+  const uploadedUrls = [];
+  try {
+    for (const base64File of newImageFiles.value) {
+      const { data } = await UploadImage({ file: base64File });
+      if (data) {
+        uploadedUrls.push(data.uploadImage.url);
+      }
+    }
+    recipe.value.images = [...recipe.value.images, ...uploadedUrls];
+  } catch (err) {
+    console.log("Failed To Upload: " + err);
+  } finally {
+    uploadLoading.value = false;
+    newImageFiles.value = [];
+  }
 };
 
 const deleterecipe = async () => {
@@ -220,6 +278,7 @@ const updaterecipe = async () => {
       router.push({
         path: '/',
       });
+      uploadLoading.value = false;
       return
     }
     if (recipe.value.fetchedid != userID) {
@@ -227,8 +286,10 @@ const updaterecipe = async () => {
       router.push({
         path: '/',
       });
+      uploadLoading.value = false;
       return
     }
+
     const { data } = await UpdateRecipe({
       id: recipeId,
       title: recipe.value.name,
@@ -236,6 +297,7 @@ const updaterecipe = async () => {
       preparation_time: parseInt(recipe.value.preparation_time),
       categories: recipe.value.categories,
       user_id: userID,
+      images: recipe.value.images,
       ingredients: recipe.value.ingredients.map(ingredient => ({
         recipe_id: recipeId,
         ingredient_name: ingredient
@@ -248,14 +310,17 @@ const updaterecipe = async () => {
     });
     if (!data) {
       console.error("Error Updating Recipe: " + err)
+      uploadLoading.value = false;
     } else {
       console.log("Updated!");
+      uploadLoading.value = false;
     }
     router.push({
       path: '/',
     });
     return
   } catch (err) {
+    uploadLoading.value = false;
     console.error("Error updating recipe:", err);
   }
 };
