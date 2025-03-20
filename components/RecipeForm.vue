@@ -96,13 +96,11 @@
                         </div>
                     </div>
                     <div class="flex justify-end space-x-4">
-                        <button
-                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
-                            Draft
-                        </button>
-                        <button @click="publishRecipe"
-                            class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">
-                            Publish
+                        <button @click="publishRecipe" :disabled="uploadLoading"
+                            class="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700 flex items-center justify-center min-w-[80px]">
+                            <span v-if="uploadLoading"
+                                class="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></span>
+                            <span v-else>Publish</span>
                         </button>
                     </div>
                 </div>
@@ -152,17 +150,20 @@
 <script setup>
 import { ref } from "vue";
 import { useMutation } from "@vue/apollo-composable";
-import { CREATE_RECIPE_MUTATION } from "@/graphql/mutations";
+import { CREATE_RECIPE_MUTATION, UPLOAD_MUTATION } from "@/graphql/mutations";
 import { useCategories } from "../composables/RecipesQuery";
 import { useRouter } from "vue-router";
 import { methods } from "../data/recipesMethods.js";
 
 const router = useRouter();
-const { mutate: createRecipe, loading, error } = useMutation(CREATE_RECIPE_MUTATION);
-const { result: categoryResult, loading: categoryLoading, error: categoryError } = useCategories();
+const { mutate: createRecipe } = useMutation(CREATE_RECIPE_MUTATION);
+const { mutate: UploadImage } = useMutation(UPLOAD_MUTATION);
+const { result: categoryResult } = useCategories();
 
 const predefinedCategories = ref([]);
 const userID = methods.getUserIdFromToken();
+const uploadLoading = ref(false);
+const newImageFiles = ref([]);
 
 const recipe = ref({
     name: "",
@@ -189,15 +190,49 @@ const removeImage = (index) => recipe.value.images.splice(index, 1);
 
 const handleMultipleImageUpload = (event) => {
     const files = event.target.files;
-    Array.from(files).forEach((file) => {
-        if (file) {
+    if (!files.length) return;
+
+    uploadLoading.value = true;
+
+    const fileReadPromises = Array.from(files).map(file => {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                recipe.value.images.push(e.target.result);
+                const base64Data = e.target.result.split(',')[1];
+                resolve(base64Data);
+            };
+            reader.onerror = () => {
+                reject("Error Occurred While Encoding Image");
             };
             reader.readAsDataURL(file);
-        }
+        });
     });
+
+    Promise.all(fileReadPromises)
+        .then(base64Files => {
+            newImageFiles.value.push(...base64Files);
+            initateUpload();
+        })
+        .catch(error => {
+            console.error(error);
+            uploadLoading.value = false;
+        });
+};
+
+const initateUpload = async () => {
+    try {
+        for (const base64File of newImageFiles.value) {
+            const { data } = await UploadImage({ file: base64File });
+            if (data) {
+                recipe.value.images.push(data.uploadImage.url);
+            }
+        }
+    } catch (err) {
+        console.log("Failed To Upload: " + err);
+    } finally {
+        uploadLoading.value = false;
+        newImageFiles.value = [];
+    }
 };
 
 const publishRecipe = async () => {
@@ -214,6 +249,7 @@ const publishRecipe = async () => {
             preparation_time: parseInt(recipe.value.preparation_time),
             categories: recipe.value.categories,
             user_id: userID,
+            images: recipe.value.images,
             ingredients: recipe.value.ingredients.map(ingredient => ({
                 ingredient_name: ingredient,
             })),
