@@ -17,7 +17,7 @@
         </nav>
         <NuxtPage />
         <footer class="text-center text-gray-600 py-4">
-            &copy; 2025 Company. All rights reserved.
+            &copy; Developed with ❤️, Minab Tech.
         </footer>
     </div>
 </template>
