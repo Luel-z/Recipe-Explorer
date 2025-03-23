@@ -1,46 +1,48 @@
 import { gql } from '@apollo/client/core';
 
 export const GET_LATEST_RECIPES = gql`
-    query GetLatestRecipes($userID: uuid!){
-      recipes(order_by: {created_at: desc}) {
-      id
-      title
-      description
-      preparation_time
-      category_id
-      images
-      user {
+    query GetLatestRecipes(
+    $userID: uuid!
+    $category: String = "%"
+    $title: String = "%"
+    $username: String = "%"
+    $preparationTime: Int
+    ){
+      recipes(
+        order_by: {created_at: desc}
+        where: {
+          category: { name: { _ilike: $category } }
+          title: { _ilike: $title }
+          user: { username: { _ilike: $username } }
+          preparation_time: { _lte: $preparationTime }
+        }
+      ) {
         id
-        username
-      }
-      likes_aggregate {
-        aggregate {
-          count(columns: recipe_id)
+        title
+        description
+        preparation_time
+        category_id
+        images
+        user {
+          id
+          username
         }
-      }
-      comments_aggregate {
-        aggregate {
-          count(columns: recipe_id)
-        }
-      }
-      bookmarks_aggregate {
-        aggregate {
-          count(columns: recipe_id)
-        }
-      }
-      ratings_aggregate {
-        aggregate {
-          avg {
-            rating
+        likes_aggregate {
+          aggregate {
+            count(columns: recipe_id)
           }
         }
-      }
-      category {
-        name
-      }
-      bookmarks(where: {user_id: {_eq: $userID}}) {
-        user_id
-      }
+        comments_aggregate {
+          aggregate {
+            count(columns: recipe_id)
+          }
+        }
+        category {
+          name
+        }
+        bookmarks(where: {user_id: {_eq: $userID}}) {
+          user_id
+        }
     }
   }
 `;
@@ -97,6 +99,18 @@ export const GET_RECIPES = gql`
   }
 `;
 
+export const GET_AGGREGATE_RATING = gql`
+  query GetAggregateRating($recipeId: uuid!) {
+    ratings_aggregate(where: {recipe_id: {_eq: $recipeId}}) {
+      aggregate {
+        avg {
+          rating
+        }
+      }
+    }
+  }
+`;
+
 export const GET_AGGREGATE = gql`
   query GetAggregateData($userId: uuid!){
     users(where: {id: {_eq: $userId}}) {
@@ -133,6 +147,65 @@ export const GET_RECIPES_TITLE = gql`
       id,  
       title,
       images
+    }
+  }
+`;
+
+export const GET_USER_LIKED_RECIPES = gql`
+  query GetLikedRecipes($userId: uuid!) {
+    likes(where: {user_id: {_eq: $userId}}) {
+      recipe {
+        id
+        title
+        images
+      }
+    }
+  }
+`;
+
+export const GET_USER_BOOKMARKED_RECIPES = gql`
+  query GetBookmarkedRecipes($userId: uuid!) {
+    bookmarks(where: {user_id: {_eq: $userId}}) {
+      recipe {
+        id
+        title
+        images
+      }
+    }
+  }
+`;
+
+export const GET_USER_COMMENTED_RECIPES = gql`
+  query GetCommentedRecipes($userId: uuid!) {
+    comments(where: {user_id: {_eq: $userId}}) {
+      recipe {
+        id
+        title
+        images
+      }
+    }
+  }
+`;
+
+export const GET_RATING_AND_COMMENT = gql`
+  query GetUserRateCommentRecipes($recipeId: uuid!) {
+    ratings(where: {recipe_id: {_eq: $recipeId}}) {
+      rating
+      id
+      recipe_id
+      user {
+        username
+      }
+      created_at
+    }
+    comments(where: {recipe_id: {_eq: $recipeId}}) {
+      id
+      message
+      recipe_id
+      created_at
+      user {
+        username
+      }
     }
   }
 `;

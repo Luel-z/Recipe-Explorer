@@ -10,63 +10,8 @@ export const computedProperties = {
         const end = start + this.recipesPerPage;
         return this.filteredRecipes.slice(start, end);
     },
-    uniqueCreators() {
-        if (this.latestRecipesResult?.recipes) {
-            const uniqueUsers = new Map();
-            this.latestRecipesResult.recipes.forEach(recipe => {
-                if (!uniqueUsers.has(recipe.user.id)) {
-                    uniqueUsers.set(recipe.user.id, {
-                        id: recipe.user.id,
-                        name: recipe.user.username,
-                    });
-                }
-            });
-            return Array.from(uniqueUsers.values());
-        }
-        return [];
-    },
     filteredRecipes() {
         let recipes = this.latestRecipesResult?.recipes || [];
-
-        const uniqueRecipes = [];
-        const seenIds = new Set();
-        for (const recipe of recipes) {
-            if (!seenIds.has(recipe.id)) {
-                seenIds.add(recipe.id);
-                uniqueRecipes.push(recipe);
-            }
-        }
-        recipes = uniqueRecipes;
-
-        if (this.selected) {
-            recipes = recipes.filter(recipe =>
-                recipe.category.name.toLowerCase() === this.selected.toLowerCase()
-            );
-        }
-
-        if (this.searchTitleInput) {
-            recipes = recipes.filter(recipe =>
-                recipe.title.toLowerCase().includes(this.searchTitleInput.toLowerCase())
-            );
-        }
-
-        if (this.searchUsernameInput) {
-            recipes = recipes.filter(recipe =>
-                recipe.user.username.toLowerCase().includes(this.searchUsernameInput.toLowerCase())
-            );
-        }
-
-        if (this.selectedPreparationTime !== null) {
-            if (this.selectedPreparationTime > 0) {
-                recipes = recipes.filter(recipe =>
-                    recipe.preparation_time <= this.selectedPreparationTime
-                );
-            } else {
-                recipes = recipes.filter(recipe =>
-                    recipe.preparation_time >= Math.abs(this.selectedPreparationTime)
-                );
-            }
-        }
 
         return recipes.map(recipe => ({
             ...recipe,
@@ -76,7 +21,6 @@ export const computedProperties = {
             image: recipe.images,
             likes: recipe.likes_aggregate.aggregate.count,
             comments: recipe.comments_aggregate.aggregate.count,
-            rating: recipe.ratings_aggregate.aggregate.avg.rating || 0,
             isBookmarked: recipe.bookmarks[0] ? recipe.bookmarks[0] : false,
         }));
     },
@@ -117,6 +61,7 @@ export const methods = {
 
     filterByPreparationTime(value) {
         this.selectedPreparationTime = value;
+        this.applyFilters();
         this.showPreparationTimeFilter = false;
     },
 
@@ -144,20 +89,20 @@ export const methods = {
             return;
         }
 
-        this.ClickRecipeAndRefetch(userID, recipe.id, 0, "liking", recipe);
+        this.ClickRecipeAndRefetch(recipe.id, 0, "liking");
     },
 
-    handleRateClick(recipe, rate) {
-        const userID = methods.getUserIdFromToken();
-        if (!userID) {
-            this.$router.push({
-                path: '/login',
-            });
-            return;
-        }
+    // handleRateClick(recipe, rate) {
+    //     const userID = methods.getUserIdFromToken();
+    //     if (!userID) {
+    //         this.$router.push({
+    //             path: '/login',
+    //         });
+    //         return;
+    //     }
 
-        this.ClickRecipeAndRefetch(userID, recipe.id, rate, "rating", recipe);
-    },
+    //     this.ClickRecipeAndRefetch(recipe.id, rate, "rating");
+    // },
 
     handleCommentClick(recipe) {
         this.checkAuthentication();
@@ -178,18 +123,18 @@ export const methods = {
             });
             return;
         }
-        this.ClickRecipeAndRefetch(userID, recipe.id, 0, "bookmarking", recipe);
+        this.ClickRecipeAndRefetch(recipe.id, 0, "bookmarking");
 
     },
 
-    async ClickRecipeAndRefetch(userID, recipeID, rate, type, recipe) {
+    async ClickRecipeAndRefetch(recipeID, rate, type) {
         try {
             if (type === "liking") {
-                const { result, loading, error } = await this.LikeRecipe({ userID, recipeID });
+                const { result, loading, error } = await this.LikeRecipe({ recipeID });
             } else if (type == "rating") {
-                const { result, loading, error } = await this.RateRecipe({ userID, recipeID, rate });
+                const { result, loading, error } = await this.RateRecipe({ recipeID, rate });
             } else if (type == "bookmarking") {
-                const { result, loading, error } = await this.BookmarkRecipe({ userID, recipeID });
+                const { result, loading, error } = await this.BookmarkRecipe({ recipeID });
             }
             await this.refetch();
         } catch (error) {

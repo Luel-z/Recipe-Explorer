@@ -248,7 +248,6 @@ const publishRecipe = async () => {
             description: recipe.value.description,
             preparation_time: parseInt(recipe.value.preparation_time),
             categories: recipe.value.categories,
-            user_id: userID,
             images: recipe.value.images,
             ingredients: recipe.value.ingredients.map(ingredient => ({
                 ingredient_name: ingredient,

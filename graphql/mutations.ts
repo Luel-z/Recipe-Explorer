@@ -36,7 +36,6 @@ export const CREATE_RECIPE_MUTATION = gql`
         $preparation_time: Int
         $categories: uuid!
         $images: [String!]!
-        $user_id: uuid!
         $ingredients: [ingredients_insert_input!]!
         $steps: [recipe_steps_insert_input!]!
     ) {
@@ -46,7 +45,6 @@ export const CREATE_RECIPE_MUTATION = gql`
       description: $description
       preparation_time: $preparation_time
       category_id: $categories
-      user_id: $user_id
       images: $images
       ingredients: { data: $ingredients }
       steps: { data: $steps }
@@ -96,7 +94,6 @@ export const UPDATE_RECIPE_MUTATION = gql`
         description: $description
         preparation_time: $preparation_time
         category_id: $categories
-        user_id: $user_id
         images: $images
       }
     ) {
@@ -124,8 +121,8 @@ export const UPDATE_RECIPE_MUTATION = gql`
 `;
 
 export const LIKE_RECIPE_MUTATION = gql`
-  mutation LikeRecipe($userID: uuid!, $recipeID: uuid!) {
-    insert_likes_one(object: {recipe_id: $recipeID, user_id: $userID}) {
+  mutation LikeRecipe($recipeID: uuid!) {
+    insert_likes_one(object: {recipe_id: $recipeID}) {
       recipe_id
       user_id
     }
@@ -133,8 +130,8 @@ export const LIKE_RECIPE_MUTATION = gql`
 `;
 
 export const RATING_RECIPE_MUTATION = gql`
-  mutation RateRecipe($userID: uuid!, $recipeID: uuid!, $rate: Int!) {
-    insert_ratings_one(object: {recipe_id: $recipeID, user_id: $userID, rating: $rate}) {
+  mutation RateRecipe($recipeID: uuid!, $rate: Int!) {
+    insert_ratings_one(object: {recipe_id: $recipeID, rating: $rate}) {
       recipe_id
       user_id
       rating
@@ -143,8 +140,8 @@ export const RATING_RECIPE_MUTATION = gql`
 `;
 
 export const BOOKMARK_RECIPE_MUTATION = gql`
-  mutation BookMarkRecipe($userID: uuid!, $recipeID: uuid!) {
-    insert_bookmarks_one(object: {recipe_id: $recipeID, user_id: $userID}) {
+  mutation BookMarkRecipe($recipeID: uuid!) {
+    insert_bookmarks_one(object: {recipe_id: $recipeID}) {
       recipe_id
       user_id
     }

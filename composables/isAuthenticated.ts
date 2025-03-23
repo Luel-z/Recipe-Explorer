@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-const isAuthenticated = ref<boolean>(false);
+var isAuthenticated = ref(false);
 export default function useAuth() {
     return {
         isAuthenticated,

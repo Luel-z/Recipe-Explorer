@@ -9,10 +9,29 @@ import {
     GET_RECIPES,
     GET_RECIPES_TITLE,
     GET_AGGREGATE,
+    GET_USER_LIKED_RECIPES,
+    GET_USER_BOOKMARKED_RECIPES,
+    GET_USER_COMMENTED_RECIPES,
+    GET_RATING_AND_COMMENT,
+    GET_AGGREGATE_RATING,
+
 } from '~/graphql/queries';
 
-export function useLatestRecipes(userId: UUID) {
-    const { result, loading, error, refetch } = useQuery(GET_LATEST_RECIPES, { userID: userId });
+export function useLatestRecipes(
+    userId: UUID,
+    category: string,
+    title: string,
+    username: string,
+    preparationTime: number,
+) {
+    const { result, loading, error, refetch } = useQuery(GET_LATEST_RECIPES, {
+        userID: userId,
+        category: category,
+        title: title,
+        username: username,
+        preparationTime: preparationTime,
+
+    });
     return {
         result,
         loading,
@@ -76,6 +95,60 @@ export function useAggregateData(userId: UUID) {
 
 export function useRecipeByUser(userId: UUID) {
     const { result, loading, error, refetch } = useQuery(GET_RECIPES_TITLE, { userId: userId });
+
+    return {
+        result,
+        loading,
+        error,
+        refetch,
+    };
+}
+
+export function useLikedByUser(userId: UUID) {
+    const { result, loading, error, refetch } = useQuery(GET_USER_LIKED_RECIPES, { userId: userId });
+
+    return {
+        result,
+        loading,
+        error,
+        refetch,
+    };
+}
+
+export function useCommentedByUser(userId: UUID) {
+    const { result, loading, error, refetch } = useQuery(GET_USER_COMMENTED_RECIPES, { userId: userId });
+
+    return {
+        result,
+        loading,
+        error,
+        refetch,
+    };
+}
+export function useBookmarkedByUser(userId: UUID) {
+    const { result, loading, error, refetch } = useQuery(GET_USER_BOOKMARKED_RECIPES, { userId: userId });
+
+    return {
+        result,
+        loading,
+        error,
+        refetch,
+    };
+}
+
+export function useUserRateAndComment(recipeId: UUID) {
+    const { result, loading, error, refetch } = useQuery(GET_RATING_AND_COMMENT, { recipeId: recipeId });
+
+    return {
+        result,
+        loading,
+        error,
+        refetch,
+    };
+}
+
+export function useAggregateRating(recipeId: UUID) {
+    const { result, loading, error, refetch } = useQuery(GET_AGGREGATE_RATING, { recipeId: recipeId });
 
     return {
         result,
