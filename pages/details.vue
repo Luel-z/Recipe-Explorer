@@ -46,9 +46,12 @@
         <h2 class="text-2xl md:text-3xl font-bold">{{ recipe.title }}</h2>
         <p class="text-gray-600 mt-2">{{ recipe.description }}</p>
 
-        <div class="mt-4 flex space-x-2">
+        <div class="mt-4 flex space-x-2 items-center">
           <span class="bg-green-100 text-gray px-3 py-1 rounded-full text-sm">Categorized by {{ recipe.category
           }}</span>
+          <div class="flex items-center space-x-1">
+            <span class="text-sm font-semibold">Average Rating: {{ aggregateRating }}</span>
+          </div>
         </div>
 
         <button @click="showPopup = true"
@@ -85,13 +88,48 @@
         </ol>
       </div>
     </div>
+
+    <hr class="my-8 border-t border-gray-300" />
+
+    <div>
+      <h3 class="text-xl md:text-2xl font-bold mb-4">Reviews</h3>
+      <div v-if="reviews.length === 0" class="text-gray-500">No reviews yet.</div>
+      <div v-else>
+        <div v-for="review in reviews" :key="review.id" class="mb-6 p-4 rounded-lg shadow-md">
+          <div class="flex items-center space-x-4">
+            <img src="/public/images/person.jpeg" alt="Profile" class="w-10 h-10 rounded-full" />
+            <div>
+              <h4 class="font-semibold">{{ review.user.username }}</h4>
+              <div class="flex items-center space-x-1">
+
+                <span v-for="star in 5" :key="star" class="text-yellow-400">
+                  {{ star <= review.rating ? '★' : '☆' }} </span>
+              </div>
+              <p class="text-sm text-gray-500">{{ new Date(review.created_at).toLocaleDateString() }}</p>
+            </div>
+          </div>
+          <p v-if="review.message" class="mt-2 text-gray-700">{{ review.message }}</p>
+        </div>
+      </div>
+
+      <div class="mt-8">
+        <textarea v-model="newComment" placeholder="Write your comment here..."
+          class="w-full p-4 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+          rows="4"></textarea>
+        <button @click="submitComment"
+          class="mt-4 bg-orange-500 text-white px-6 py-2 rounded-lg shadow-md hover:bg-orange-600">
+          Submit Comment
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, watchEffect } from 'vue';
 import { useRoute } from 'vue-router';
-import { useRecipesIngredient, useRecipesStep } from '~/composables/RecipesQuery';
+import { methods } from '../data/recipesMethods.js';
+import { useRecipesIngredient, useRecipesStep, useUserRateAndComment, useAggregateRating } from '~/composables/RecipesQuery';
 definePageMeta({
   middleware: 'auth'
 })
@@ -99,10 +137,54 @@ definePageMeta({
 const route = useRoute();
 const recipe = JSON.parse(route.query.recipe);
 const recipeId = ref(recipe.id);
-const { result: ingredientsResult, loading: ingredientsLoading, error: ingredientsError } = useRecipesIngredient(recipeId);
-const { result: stepsResult, loading: stepsLoading, error: stepsError } = useRecipesStep(recipeId);
+
 const ingredients = ref([]);
 const steps = ref([]);
+//var userId = ref(methods.getUserIdFromToken());
+const ratings = ref([]);
+const comments = ref([]);
+const aggregateRating = ref();
+const newComment = ref('');
+
+const { result: ingredientsResult } = useRecipesIngredient(recipeId);
+const { result: stepsResult } = useRecipesStep(recipeId);
+const { result: RateAndCommentResult } = useUserRateAndComment(recipeId);
+const { result: RatingAggregateResult } = useAggregateRating(recipeId);
+
+const reviews = computed(() => {
+  const combined = [];
+  ratings.value.forEach((rating) => {
+    combined.push({
+      id: rating.id,
+      user: rating.user,
+      rating: rating.rating,
+      created_at: rating.created_at,
+      message: null,
+    });
+  });
+
+
+  comments.value.forEach((comment) => {
+    const existingReview = combined.find((review) => review.user.id === comment.user.id);
+    if (existingReview) {
+
+      existingReview.message = comment.message;
+    } else {
+
+      combined.push({
+        id: comment.id,
+        user: comment.user,
+        rating: 0,
+        created_at: comment.created_at,
+        message: comment.message,
+      });
+    }
+  });
+
+  return combined;
+});
+
+const totalRatings = computed(() => ratings.value.length);
 
 watchEffect(() => {
   if (ingredientsResult.value) {
@@ -110,6 +192,13 @@ watchEffect(() => {
   }
   if (stepsResult.value) {
     steps.value = stepsResult.value.recipe_steps;
+  }
+  if (RateAndCommentResult.value) {
+    ratings.value = RateAndCommentResult.value.ratings;
+    comments.value = RateAndCommentResult.value.comments;
+  }
+  if (RatingAggregateResult.value) {
+    aggregateRating.value = RatingAggregateResult.value.ratings_aggregate.aggregate.avg.rating || 0;
   }
 });
 
@@ -124,6 +213,12 @@ const prevImage = () => {
 const nextImage = () => {
   currentImage.value = (currentImage.value + 1) % images.length;
 };
+
+const submitComment = () => {
+  console.log('New Comment:', newComment.value);
+  newComment.value = '';
+};
+
 </script>
 
 <style scoped>

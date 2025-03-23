@@ -37,22 +37,54 @@
 
       <div class="mt-8 border-b border-gray-200">
         <ul class="flex">
-          <li class="mr-4 pb-2 border-b-2 border-orange-500 text-orange-500 font-medium cursor-pointer">
+          <li class="mr-4 pb-2 cursor-pointer" :class="{
+            'border-b-2 border-orange-500 text-orange-500 font-medium': activeTab === 'posted',
+            'text-gray-500': activeTab !== 'posted',
+          }" @click="setActiveTab('posted')">
             Posted
           </li>
-          <li class="pb-2 mr-4 text-gray-500 cursor-pointer">BookMarked</li>
-          <li class="pb-2 mr-4 text-gray-500 cursor-pointer">Liked</li>
+          <li class="mr-4 pb-2 cursor-pointer" :class="{
+            'border-b-2 border-orange-500 text-orange-500 font-medium': activeTab === 'bookmarked',
+            'text-gray-500': activeTab !== 'bookmarked',
+          }" @click="setActiveTab('bookmarked')">
+            Bookmarked
+          </li>
+          <li class="mr-4 pb-2 cursor-pointer" :class="{
+            'border-b-2 border-orange-500 text-orange-500 font-medium': activeTab === 'liked',
+            'text-gray-500': activeTab !== 'liked',
+          }" @click="setActiveTab('liked')">
+            Liked
+          </li>
         </ul>
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-8">
-        <div v-for="(recipe, index) in RecipeByUserResult?.recipes" :key="recipe.id"
+
+        <div v-if="activeTab === 'posted'" v-for="(recipe, index) in postedRecipes" :key="recipe.id"
           class="aspect-w-1 aspect-h-1 overflow-hidden rounded-lg shadow cursor-pointer"
           @click="redirectToUpdateRecipe(recipe.id)">
           <img :src="recipe.images && recipe.images.length > 0 ? recipe.images[0] : defaultImage" :alt="recipe.title"
             class="w-full h-full object-cover" />
+          <div class="text-center mt-2 text-sm font-medium text-black">
+            {{ recipe.title || "Recipe Title" }}
+          </div>
+        </div>
+
+        <div v-if="activeTab === 'bookmarked'" v-for="(bookmark, index) in bookmarkedRecipes" :key="bookmark.id"
+          class="aspect-w-1 aspect-h-1 overflow-hidden rounded-lg shadow cursor-pointer" @click="">
+          <img :src="bookmark.images && bookmark.images.length > 0 ? bookmark.images[0] : defaultImage"
+            :alt="bookmark.title" class="w-full h-full object-cover" />
           <div class="text-center mt-2 text-sm font-medium text-gray-700">
-            {{ recipe.title }}
+            {{ bookmark.title || "Recipe Title" }}
+          </div>
+        </div>
+
+        <div v-if="activeTab === 'liked'" v-for="(like, index) in likedRecipes"
+          class="aspect-w-1 aspect-h-1 overflow-hidden rounded-lg shadow cursor-pointer" @click="">
+          <img :src="like.images && like.images.length > 0 ? like.images[0] : defaultImage" :alt="like.title"
+            class="w-full h-full object-cover" />
+          <div class="text-center mt-2 text-sm font-medium text-gray-700">
+            {{ like.title || "Recipe Title" }}
           </div>
         </div>
       </div>
@@ -61,15 +93,21 @@
 </template>
 
 <script setup>
-import { methods } from '../data/recipesMethods.js';
-import { useRecipeByUser, useAggregateData } from '../composables/RecipesQuery';
-import { useRouter } from 'vue-router';
-
 definePageMeta({
   middleware: 'auth'
 })
+import { methods } from '../data/recipesMethods.js';
+import { ref, watchEffect } from 'vue';
+import { useRecipeByUser, useAggregateData, useLikedByUser, useBookmarkedByUser } from '../composables/RecipesQuery';
+import { useRouter } from 'vue-router';
 
 var userID;
+const activeTab = ref("posted");
+const router = useRouter();
+const defaultImage = "https://cdn.dribbble.com/userupload/22570626/file/original-379b4978ee41eeb352e0ddacbaa6df96.jpg?resize=800x600&vertical=center";
+const postedRecipes = ref([]);
+const likedRecipes = ref([]);
+const bookmarkedRecipes = ref([]);
 
 try {
   userID = methods.getUserIdFromToken();
@@ -79,18 +117,32 @@ try {
 } catch (err) {
   console.log("Error Getting Token: ", err.message);
 }
-
-const { result: RecipeByUserResult, loading: RecipeByUserLoading, error: RecipeByUserError, refetch } = useRecipeByUser(userID);
+const { result: RecipeByUserResult, loading: RecipeByUserLoading, error: RecipeByUserError } = useRecipeByUser(userID);
 const { result: AggregateDataResult, loading: AggregateDataLoading, error: AggregateDataError } = useAggregateData(userID);
-const defaultImage = "https://cdn.dribbble.com/userupload/22570626/file/original-379b4978ee41eeb352e0ddacbaa6df96.jpg?resize=800x600&vertical=center";
+const { result: useLikedByUserResult, refetch: LikedRefetch } = useLikedByUser(userID);
+const { result: useBookmarkedByUserResult, refetch: BookmarkedRefetch } = useBookmarkedByUser(userID);
 
+watchEffect(() => {
+  if (activeTab.value === "posted") {
+    postedRecipes.value = RecipeByUserResult.value?.recipes || [];
+  } else if (activeTab.value === "liked") {
+    likedRecipes.value = useLikedByUserResult.value?.likes.map((like) => like.recipe) || [];
+    LikedRefetch();
+  } else if (activeTab.value === "bookmarked") {
+    bookmarkedRecipes.value = useBookmarkedByUserResult.value?.bookmarks.map((bookmark) => bookmark.recipe) || [];
+    BookmarkedRefetch();
+  }
+});
+const setActiveTab = (tab) => {
+  activeTab.value = tab;
+};
 
-const router = useRouter();
 const redirectToUpdateRecipe = (recipeId) => {
   if (recipeId) {
     router.push({ path: '/update-recipe', query: { recipeId: recipeId } });
   }
 };
+
 </script>
 
 <style scoped>

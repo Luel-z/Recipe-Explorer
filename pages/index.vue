@@ -2,13 +2,14 @@
     <div v-if="latestRecipesLoading || categoryLoading" class="flex justify-center items-center h-screen">
         <p class="text-xl font-semibold">Loading...</p>
     </div>
+    <div v-if="latestRecipesError">Error: {{ latestRecipesError.message }}</div>
     <div v-else>
         <div class="container mx-auto py-10 px-4 flex flex-col items-center">
             <header class="flex flex-col sm:flex-row justify-center items-center mb-10 w-full">
                 <div class="flex-1 max-w-lg relative w-full sm:w-auto">
                     <div class="flex items-center">
                         <input :type="'text'" :placeholder="searchPlaceholder" v-model="searchInput"
-                            class="w-full px-4 py-3 border rounded-l-full shadow-md" />
+                            @change="applyFilters" class="w-full px-4 py-3 border rounded-l-full shadow-md" />
                         <button @click="toggleSearchType"
                             class="px-4 py-3 bg-gray-200 rounded-r-full shadow-md text-sm font-semibold">
                             {{ searchType === 'title' ? 'By Creator' : 'By Title' }}
@@ -39,7 +40,7 @@
                     :class="selected === category.name ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-800'">
                     {{ category.name }}
                 </button>
-                <button @click="selected = ''"
+                <button @click="changeCategory(null)"
                     class="px-3 py-1 sm:px-4 sm:py-2 bg-gray-200 rounded-full whitespace-nowrap">
                     Clear Filter
                 </button>
@@ -85,15 +86,6 @@
                                             :class="{ 'cursor-pointer': isAuthenticated, 'cursor-not-allowed': !isAuthenticated }">
                                             <i class="fas fa-comment text-gray"></i> {{ recipe.comments }}
                                         </span>
-                                        <span>
-                                            <i v-for="star in 5" :key="star"
-                                                @click.stop="isAuthenticated ? handleRateClick(recipe, star) : null"
-                                                :class="[
-                                                    star <= Math.round(recipe.rating) ? 'fas fa-star text-yellow-400' : 'far fa-star text-gray-300',
-                                                    { 'cursor-pointer': isAuthenticated, 'cursor-not-allowed': !isAuthenticated }
-                                                ]">
-                                            </i>
-                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -124,7 +116,7 @@ import { useMutation } from "@vue/apollo-composable";
 import { data } from '../data/recipesData.js';
 import { computedProperties, methods } from '../data/recipesMethods.js';
 import { useHead } from '@unhead/vue';
-import { LIKE_RECIPE_MUTATION, RATING_RECIPE_MUTATION, BOOKMARK_RECIPE_MUTATION } from "@/graphql/mutations";
+import { LIKE_RECIPE_MUTATION, BOOKMARK_RECIPE_MUTATION } from "@/graphql/mutations";
 
 export default defineComponent({
     data() {
@@ -145,8 +137,10 @@ export default defineComponent({
             set(value) {
                 if (this.searchType === 'title') {
                     this.searchTitleInput = value;
+                    this.searchUsernameInput = "";
                 } else {
                     this.searchUsernameInput = value;
+                    this.searchTitleInput = "";
                 }
             },
         },
@@ -155,12 +149,16 @@ export default defineComponent({
         ...methods,
         toggleSearchType() {
             this.searchType = this.searchType === 'title' ? 'creator' : 'title';
+            this.searchInput = '';
         },
     },
     setup() {
-        var selected = ref();
+        var selected = ref("");
+        var searchTitleInput = ref("");
+        var searchUsernameInput = ref("");
+        var selectedPreparationTime = ref();
         var categories = ref([]);
-        var userId = methods.getUserIdFromToken() ? methods.getUserIdFromToken() : "11111111-1111-1111-1111-111111111111"
+        var userId = methods.getUserIdFromToken() ? methods.getUserIdFromToken() : "00000000-0000-0000-0000-000000000000"
 
 
         useHead({
@@ -171,10 +169,16 @@ export default defineComponent({
                 },
             ],
         });
-        const { result: latestRecipesResult, loading: latestRecipesLoading, error: latestRecipesError, refetch } = useLatestRecipes(userId);
+        const { result: latestRecipesResult, loading: latestRecipesLoading, error: latestRecipesError, refetch }
+            = useLatestRecipes(
+                userId,
+                selected.value ? `%${selected.value}%` : '%',
+                searchTitleInput.value ? `%${searchTitleInput.value}%` : '%',
+                searchUsernameInput.value ? `%${searchUsernameInput.value}%` : '%',
+                selectedPreparationTime.value || 200,
+            );
         const { result: categoryResult, loading: categoryLoading, error: categoryError } = useCategories();
         const { mutate: LikeRecipe } = useMutation(LIKE_RECIPE_MUTATION);
-        const { mutate: RateRecipe } = useMutation(RATING_RECIPE_MUTATION);
         const { mutate: BookmarkRecipe } = useMutation(BOOKMARK_RECIPE_MUTATION);
 
         watchEffect(() => {
@@ -184,8 +188,19 @@ export default defineComponent({
         });
 
         function changeCategory(category) {
-            selected.value = category.name;
+            category === null ? selected.value = "" : selected.value = category.name;
+            applyFilters();
         }
+        const applyFilters = async () => {
+            await refetch({
+                userID: userId,
+                category: selected.value ? `%${selected.value}%` : '%',
+                title: searchTitleInput.value ? `%${searchTitleInput.value}%` : '%',
+                username: searchUsernameInput.value ? `%${searchUsernameInput.value}%` : '%',
+                preparationTime: selectedPreparationTime.value || 200,
+            });
+        };
+
         return {
             latestRecipesResult,
             latestRecipesLoading,
@@ -198,8 +213,11 @@ export default defineComponent({
             categories,
             LikeRecipe,
             refetch,
-            RateRecipe,
             BookmarkRecipe,
+            applyFilters,
+            searchTitleInput,
+            searchUsernameInput,
+            selectedPreparationTime,
         };
     },
 });
