@@ -12,6 +12,7 @@
   "dependencies": {
     "@apollo/client": "^3.13.1",
     "@tailwindcss/vite": "^4.0.8",
+    "@types/node": "^22.13.13",
     "@vue/apollo-composable": "^4.2.1",
     "cookie": "^1.0.2",
     "crypto": "^1.0.1",

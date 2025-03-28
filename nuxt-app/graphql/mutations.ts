@@ -147,3 +147,46 @@ export const BOOKMARK_RECIPE_MUTATION = gql`
     }
   }
 `;
+
+export const COMMENTING_RECIPE_MUTATION = gql`
+  mutation CommentRecipe($recipeID: uuid!, $comment: String ) {
+    insert_comments_one(object: {recipe_id: $recipeID, message: $comment}) {
+      recipe_id
+      user_id
+      message
+    }
+  }
+`;
+
+export const INITIATE_CHAPA_MUTATION = gql`
+  mutation InitiateChapaPayment(
+    $amount: String!
+    $email: String!
+    $first_name: String!
+    $last_name: String!
+  ) {
+    initiateChapaPayment(
+        amount: $amount
+        email: $email
+        first_name: $first_name
+        last_name: $last_name
+    ) {
+      payment_url
+      message
+      transaction_number
+    }
+  }
+`;
+
+export const POPULATE_PAYMENT_DATA = gql`
+  mutation PopulatePaymentData(
+    $amount: float8!
+    $email: String!
+    $payloadTxRef: String!
+    $recipeId: uuid!
+  ) {
+  insert_payments(objects: {amount: $amount, email: $email, payloadTxRef: $payloadTxRef, recipeId: $recipeId}) {
+    affected_rows
+  }
+  }
+`;

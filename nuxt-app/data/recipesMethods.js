@@ -89,32 +89,9 @@ export const methods = {
             return;
         }
 
-        this.ClickRecipeAndRefetch(recipe.id, 0, "liking");
+        this.ClickRecipeAndRefetch(recipe.id, "liking");
     },
 
-    // handleRateClick(recipe, rate) {
-    //     const userID = methods.getUserIdFromToken();
-    //     if (!userID) {
-    //         this.$router.push({
-    //             path: '/login',
-    //         });
-    //         return;
-    //     }
-
-    //     this.ClickRecipeAndRefetch(recipe.id, rate, "rating");
-    // },
-
-    handleCommentClick(recipe) {
-        this.checkAuthentication();
-        if (!this.isAuthenticated) {
-            this.$router.push({
-                path: '/login',
-            });
-            return
-        } else {
-
-        }
-    },
     handleBookmarkClick(recipe) {
         const userID = methods.getUserIdFromToken();
         if (!userID) {
@@ -123,16 +100,14 @@ export const methods = {
             });
             return;
         }
-        this.ClickRecipeAndRefetch(recipe.id, 0, "bookmarking");
+        this.ClickRecipeAndRefetch(recipe.id, "bookmarking");
 
     },
 
-    async ClickRecipeAndRefetch(recipeID, rate, type) {
+    async ClickRecipeAndRefetch(recipeID, type) {
         try {
             if (type === "liking") {
                 const { result, loading, error } = await this.LikeRecipe({ recipeID });
-            } else if (type == "rating") {
-                const { result, loading, error } = await this.RateRecipe({ recipeID, rate });
             } else if (type == "bookmarking") {
                 const { result, loading, error } = await this.BookmarkRecipe({ recipeID });
             }

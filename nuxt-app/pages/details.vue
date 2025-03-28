@@ -50,14 +50,51 @@
           <span class="bg-green-100 text-gray px-3 py-1 rounded-full text-sm">Categorized by {{ recipe.category
           }}</span>
           <div class="flex items-center space-x-1">
-            <span class="text-sm font-semibold">Average Rating: {{ aggregateRating }}</span>
+            <span class="text-sm font-semibold">Average Rating: {{ aggregateRating }}
+            </span>
+            <span v-for="star in 5" :key="star" class="text-yellow-400" @click.stop="submitComment(2, star)">
+              {{ star <= aggregateRating ? '★' : '☆' }} </span>
           </div>
         </div>
-
         <button @click="showPopup = true"
           class="mt-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-red-600">
           Buy the Full Recipe
         </button>
+        <div v-if="showPopup" class="fixed inset-0 flex items-center justify-center z-10">
+          <div class="bg-white p-6 rounded-lg max-w-md w-full shadow-xl border border-gray-200">
+            <h2 class="text-xl font-bold mb-4">Complete Your Purchase For Recipe {{ recipe.title }}</h2>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">First Name</label>
+                <input v-model="firstName" type="text" class="w-full p-2 border rounded" placeholder="Your first name">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium mb-1">Last Name</label>
+                <input v-model="lastName" type="text" class="w-full p-2 border rounded" placeholder="Your last name">
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">Amount</label>
+                <input v-model="amount" type="text" class="w-full p-2 border rounded" placeholder="Amount To Be Paid">
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">Email</label>
+                <input v-model="email" type="text" class="w-full p-2 border rounded" placeholder="Your Email">
+              </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+              <button @click="showPopup = false" class="px-4 py-2 border rounded hover:bg-gray-100">
+                Cancel
+              </button>
+              <button @click="handlePayment" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                :disabled="loading">
+                {{ loading ? 'Processing...' : 'Proceed to Payment' }}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -116,7 +153,7 @@
         <textarea v-model="newComment" placeholder="Write your comment here..."
           class="w-full p-4 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
           rows="4"></textarea>
-        <button @click="submitComment"
+        <button @click="submitComment(1, 0)"
           class="mt-4 bg-orange-500 text-white px-6 py-2 rounded-lg shadow-md hover:bg-orange-600">
           Submit Comment
         </button>
@@ -128,7 +165,9 @@
 <script setup>
 import { ref, watchEffect } from 'vue';
 import { useRoute } from 'vue-router';
-import { methods } from '../data/recipesMethods.js';
+import { useMutation } from "@vue/apollo-composable";
+import { data } from '../data/recipesData.js';
+import { RATING_RECIPE_MUTATION, COMMENTING_RECIPE_MUTATION, INITIATE_CHAPA_MUTATION, POPULATE_PAYMENT_DATA } from "@/graphql/mutations";
 import { useRecipesIngredient, useRecipesStep, useUserRateAndComment, useAggregateRating } from '~/composables/RecipesQuery';
 definePageMeta({
   middleware: 'auth'
@@ -140,51 +179,95 @@ const recipeId = ref(recipe.id);
 
 const ingredients = ref([]);
 const steps = ref([]);
-//var userId = ref(methods.getUserIdFromToken());
 const ratings = ref([]);
 const comments = ref([]);
 const aggregateRating = ref();
 const newComment = ref('');
+const showPopup = ref(false);
+const firstName = ref('');
+const lastName = ref('');
+const loading = ref(false);
+const amount = ref();
+const email = ref();
+
+const { mutate: checkout, onError } = useMutation(INITIATE_CHAPA_MUTATION);
+const { mutate: populatePaymentData } = useMutation(POPULATE_PAYMENT_DATA);
 
 const { result: ingredientsResult } = useRecipesIngredient(recipeId);
 const { result: stepsResult } = useRecipesStep(recipeId);
-const { result: RateAndCommentResult } = useUserRateAndComment(recipeId);
+const { result: RateAndCommentResult, refetch: RateAndCommentrefetch } = useUserRateAndComment(recipeId);
 const { result: RatingAggregateResult } = useAggregateRating(recipeId);
+const { mutate: RateRecipe } = useMutation(RATING_RECIPE_MUTATION);
+const { mutate: CommentRecipe } = useMutation(COMMENTING_RECIPE_MUTATION);
 
 const reviews = computed(() => {
-  const combined = [];
-  ratings.value.forEach((rating) => {
-    combined.push({
+  const userRatings = new Map();
+  ratings.value.forEach(rating => {
+    userRatings.set(rating.user.username, {
       id: rating.id,
       user: rating.user,
       rating: rating.rating,
-      created_at: rating.created_at,
-      message: null,
+      created_at: rating.created_at
     });
   });
 
+  const commentsByUser = new Map();
+  comments.value.forEach(comment => {
+    if (!commentsByUser.has(comment.user.username)) {
+      commentsByUser.set(comment.user.username, []);
+    }
+    commentsByUser.get(comment.user.username).push({
+      id: comment.id,
+      message: comment.message,
+      created_at: comment.created_at
+    });
+  });
 
-  comments.value.forEach((comment) => {
-    const existingReview = combined.find((review) => review.user.id === comment.user.id);
-    if (existingReview) {
+  const combined = [];
 
-      existingReview.message = comment.message;
+  userRatings.forEach((ratingData, username) => {
+    const userComments = commentsByUser.get(username) || [];
+
+    if (userComments.length > 0) {
+      userComments.forEach(comment => {
+        combined.push({
+          ...ratingData,
+          message: comment.message,
+          comment_id: comment.id,
+          comment_created_at: comment.created_at
+        });
+      });
     } else {
-
       combined.push({
-        id: comment.id,
-        user: comment.user,
-        rating: 0,
-        created_at: comment.created_at,
-        message: comment.message,
+        ...ratingData,
+        message: null,
+        comment_id: null,
+        comment_created_at: null
       });
     }
   });
 
-  return combined;
-});
+  commentsByUser.forEach((comments, username) => {
+    if (!userRatings.has(username)) {
+      comments.forEach(comment => {
+        combined.push({
+          id: comment.id,
+          user: { username: username },
+          rating: 0,
+          created_at: comment.created_at,
+          message: comment.message,
+          rated_at: null
+        });
+      });
+    }
+  });
 
-const totalRatings = computed(() => ratings.value.length);
+  return combined.sort((a, b) => {
+    const dateA = a.comment_created_at || a.created_at;
+    const dateB = b.comment_created_at || b.created_at;
+    return new Date(dateB) - new Date(dateA);
+  });
+});
 
 watchEffect(() => {
   if (ingredientsResult.value) {
@@ -203,7 +286,7 @@ watchEffect(() => {
 });
 
 const currentImage = ref(0);
-const defaultImage = "https://cdn.dribbble.com/userupload/22570626/file/original-379b4978ee41eeb352e0ddacbaa6df96.jpg?resize=800x600&vertical=center";
+const defaultImage = data.defaultImage;
 const images = recipe.images && recipe.images.length > 0 ? recipe.images : [defaultImage];
 
 const prevImage = () => {
@@ -214,9 +297,49 @@ const nextImage = () => {
   currentImage.value = (currentImage.value + 1) % images.length;
 };
 
-const submitComment = () => {
-  console.log('New Comment:', newComment.value);
+const handlePayment = async () => {
+  try {
+    loading.value = true;
+    const { data: datas, onError } = await checkout({
+      amount: amount.value,
+      email: email.value,
+      first_name: firstName.value,
+      last_name: lastName.value
+    });
+
+    if (datas?.initiateChapaPayment?.payment_url && datas?.initiateChapaPayment?.message == "success") {
+      const { data: populatedata, error } = await populatePaymentData({
+        amount: amount.value,
+        email: email.value,
+        payloadTxRef: datas.initiateChapaPayment.transaction_number,
+        recipeId: recipeId.value
+      });
+      if (error != null) {
+        console.log("Error while adding payment info" + error)
+      } else {
+        console.log(populatedata);
+      }
+      window.location.href = datas.initiateChapaPayment.payment_url;
+    } else {
+      console.error("Error: No Checkout URL received." + datas?.initiateChapaPayment?.message);
+    }
+  } catch (error) {
+    console.error("Payment Error:", error);
+  } finally {
+    showPopup.value = false;
+    loading.value = false;
+  }
+};
+
+const submitComment = async (type, rate) => {
+  if (type === 1) {
+    const { result, loading, error } = await CommentRecipe({ recipeID: recipeId.value, comment: newComment.value });
+  } else if (type === 2) {
+    const { result, loading, error } = await RateRecipe({ recipeID: recipeId.value, rate: rate });
+
+  }
   newComment.value = '';
+  RateAndCommentrefetch();
 };
 
 </script>

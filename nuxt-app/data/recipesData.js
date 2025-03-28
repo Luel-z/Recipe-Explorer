@@ -11,4 +11,5 @@ export const data = () => ({
         { label: 'Clear', value: 200 },
     ],
     isAuthenticated: true,
+    defaultImage: "https://cdn.dribbble.com/userupload/22570626/file/original-379b4978ee41eeb352e0ddacbaa6df96.jpg?resize=800x600&vertical=center",
 });

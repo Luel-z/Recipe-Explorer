@@ -6,7 +6,7 @@ import { parse } from "cookie";
 
 export default defineNuxtPlugin((nuxtApp) => {
     const httpLink = createHttpLink({
-        uri: "http://localhost:8080/v1/graphql",
+        uri: useRuntimeConfig().public.graphqlEndpoint,
         credentials: "include",
     });
 

@@ -82,7 +82,7 @@
                                             :class="{ 'cursor-pointer': isAuthenticated, 'cursor-not-allowed': !isAuthenticated }">
                                             <i class="fas fa-heart text-gray"></i> {{ recipe.likes }}
                                         </span>
-                                        <span @click.stop="handleCommentClick(recipe)"
+                                        <span @click.stop="handleRecipeClick(recipe)"
                                             :class="{ 'cursor-pointer': isAuthenticated, 'cursor-not-allowed': !isAuthenticated }">
                                             <i class="fas fa-comment text-gray"></i> {{ recipe.comments }}
                                         </span>

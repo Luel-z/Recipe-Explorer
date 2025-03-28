@@ -165,9 +165,6 @@ watchEffect(() => {
   if (categoryResult.value) {
     predefinedCategories.value = categoryResult.value.categories;
   }
-});
-
-watchEffect(() => {
   if (recipesResult.value) {
     const fetchedRecipe = recipesResult.value.recipes[0];
     if (fetchedRecipe) {
@@ -177,10 +174,9 @@ watchEffect(() => {
       recipe.value.ingredients = fetchedRecipe.ingredients.map(ingredient => ingredient.ingredient_name);
       recipe.value.instructions = fetchedRecipe.steps.map(step => step.description);
       recipe.value.categories = fetchedRecipe.category.id;
-      const defaultImage = "https://cdn.dribbble.com/userupload/22570626/file/original-379b4978ee41eeb352e0ddacbaa6df96.jpg?resize=800x600&vertical=center";
       recipe.value.images = (fetchedRecipe.images && fetchedRecipe.images.length > 0)
         ? fetchedRecipe.images
-        : [defaultImage];
+        : [data.defaultImage];
       recipe.value.fetchedid = fetchedRecipe.user.id;
     }
   }

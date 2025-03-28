@@ -153,7 +153,6 @@ import { useMutation } from "@vue/apollo-composable";
 import { CREATE_RECIPE_MUTATION, UPLOAD_MUTATION } from "@/graphql/mutations";
 import { useCategories } from "../composables/RecipesQuery";
 import { useRouter } from "vue-router";
-import { methods } from "../data/recipesMethods.js";
 
 const router = useRouter();
 const { mutate: createRecipe } = useMutation(CREATE_RECIPE_MUTATION);
@@ -161,7 +160,6 @@ const { mutate: UploadImage } = useMutation(UPLOAD_MUTATION);
 const { result: categoryResult } = useCategories();
 
 const predefinedCategories = ref([]);
-const userID = methods.getUserIdFromToken();
 const uploadLoading = ref(false);
 const newImageFiles = ref([]);
 
@@ -237,12 +235,6 @@ const initateUpload = async () => {
 
 const publishRecipe = async () => {
     try {
-        if (!userID) {
-            console.log("Not Authenticated")
-            router.push({
-                path: '/',
-            });
-        }
         const { data } = await createRecipe({
             title: recipe.value.name,
             description: recipe.value.description,

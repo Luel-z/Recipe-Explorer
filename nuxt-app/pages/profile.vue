@@ -98,13 +98,14 @@ definePageMeta({
 })
 import { methods } from '../data/recipesMethods.js';
 import { ref, watchEffect } from 'vue';
+import { data } from '../data/recipesData.js';
 import { useRecipeByUser, useAggregateData, useLikedByUser, useBookmarkedByUser } from '../composables/RecipesQuery';
 import { useRouter } from 'vue-router';
 
 var userID;
 const activeTab = ref("posted");
 const router = useRouter();
-const defaultImage = "https://cdn.dribbble.com/userupload/22570626/file/original-379b4978ee41eeb352e0ddacbaa6df96.jpg?resize=800x600&vertical=center";
+const defaultImage = data.defaultImage;
 const postedRecipes = ref([]);
 const likedRecipes = ref([]);
 const bookmarkedRecipes = ref([]);
