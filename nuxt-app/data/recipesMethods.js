@@ -22,6 +22,7 @@ export const computedProperties = {
             likes: recipe.likes_aggregate.aggregate.count,
             comments: recipe.comments_aggregate.aggregate.count,
             isBookmarked: recipe.bookmarks[0] ? recipe.bookmarks[0] : false,
+            is_premium: recipe.is_premium,
         }));
     },
 

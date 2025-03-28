@@ -23,6 +23,7 @@ export const GET_LATEST_RECIPES = gql`
         preparation_time
         category_id
         images
+        is_premium
         user {
           id
           username
@@ -80,6 +81,7 @@ export const GET_RECIPES = gql`
       description
       preparation_time
       images
+      is_premium
       user {
         id
         username
@@ -210,4 +212,26 @@ export const GET_RATING_AND_COMMENT = gql`
   }
 `;
 
+export const GET_RECIPES_PREVIEW_INGREDIENT = gql`
+  query GetRecipesIngredient($recipe_id: uuid!) {
+    ingredients(where: { recipe_id: { _eq: $recipe_id } }, limit: 1) {
+      ingredient_name
+    }
+  }
+`;
 
+export const GET_RECIPES_PREVIEW_STEPS = gql`
+  query GetRecipesSteps($recipe_id: uuid!) {
+    recipe_steps(where: { recipe_id: { _eq: $recipe_id } },order_by: { step_number: asc }, limit: 1) {
+      description
+    }
+  }
+`;
+
+export const GET_PAYMENTS = gql`
+  query GetPayments($recipe_id: uuid!, $userId: uuid!) {
+    payments(where: {recipeId: {_eq: $recipe_id}, userId: {_eq: $userId}, status: {_eq: "paid"}}) {
+      status
+    }
+  }
+`;

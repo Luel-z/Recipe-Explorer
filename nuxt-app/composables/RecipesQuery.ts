@@ -14,6 +14,9 @@ import {
     GET_USER_COMMENTED_RECIPES,
     GET_RATING_AND_COMMENT,
     GET_AGGREGATE_RATING,
+    GET_RECIPES_PREVIEW_INGREDIENT,
+    GET_RECIPES_PREVIEW_STEPS,
+    GET_PAYMENTS,
 
 } from '~/graphql/queries';
 
@@ -155,5 +158,35 @@ export function useAggregateRating(recipeId: UUID) {
         loading,
         error,
         refetch,
+    };
+}
+
+export function usePreviewIngredients(recipe_id: Ref<string>) {
+    const { result, loading, error } = useQuery(GET_RECIPES_PREVIEW_INGREDIENT, { recipe_id: recipe_id.value });
+
+    return {
+        result,
+        loading,
+        error
+    };
+}
+
+export function usePreviewSteps(recipe_id: Ref<string>) {
+    const { result, loading, error } = useQuery(GET_RECIPES_PREVIEW_STEPS, { recipe_id: recipe_id.value });
+
+    return {
+        result,
+        loading,
+        error
+    };
+}
+
+export function usePayments(recipe_id: Ref<string>, userId: string) {
+    const { result, loading, error } = useQuery(GET_PAYMENTS, { recipe_id: recipe_id.value, userId: userId });
+
+    return {
+        result,
+        loading,
+        error
     };
 }

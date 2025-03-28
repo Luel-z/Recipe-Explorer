@@ -167,8 +167,9 @@ import { ref, watchEffect } from 'vue';
 import { useRoute } from 'vue-router';
 import { useMutation } from "@vue/apollo-composable";
 import { data } from '../data/recipesData.js';
+import { methods } from '../data/recipesMethods.js';
 import { RATING_RECIPE_MUTATION, COMMENTING_RECIPE_MUTATION, INITIATE_CHAPA_MUTATION, POPULATE_PAYMENT_DATA } from "@/graphql/mutations";
-import { useRecipesIngredient, useRecipesStep, useUserRateAndComment, useAggregateRating } from '~/composables/RecipesQuery';
+import { useRecipesIngredient, useRecipesStep, useUserRateAndComment, useAggregateRating, usePreviewSteps, usePreviewIngredients, usePayments } from '~/composables/RecipesQuery';
 definePageMeta({
   middleware: 'auth'
 })
@@ -176,6 +177,7 @@ definePageMeta({
 const route = useRoute();
 const recipe = JSON.parse(route.query.recipe);
 const recipeId = ref(recipe.id);
+var userId = methods.getUserIdFromToken()
 
 const ingredients = ref([]);
 const steps = ref([]);
@@ -193,12 +195,73 @@ const email = ref();
 const { mutate: checkout, onError } = useMutation(INITIATE_CHAPA_MUTATION);
 const { mutate: populatePaymentData } = useMutation(POPULATE_PAYMENT_DATA);
 
-const { result: ingredientsResult } = useRecipesIngredient(recipeId);
-const { result: stepsResult } = useRecipesStep(recipeId);
 const { result: RateAndCommentResult, refetch: RateAndCommentrefetch } = useUserRateAndComment(recipeId);
 const { result: RatingAggregateResult } = useAggregateRating(recipeId);
 const { mutate: RateRecipe } = useMutation(RATING_RECIPE_MUTATION);
 const { mutate: CommentRecipe } = useMutation(COMMENTING_RECIPE_MUTATION);
+
+if (recipe.is_premium) {
+  const { result: payment } = usePayments(recipeId, userId);
+
+  if (payment.value?.payments.status == "paid") {
+    const { result: ingredientsResult } = useRecipesIngredient(recipeId);
+    const { result: stepsResult } = useRecipesStep(recipeId);
+
+    watchEffect(() => {
+      if (ingredientsResult.value) {
+        ingredients.value = ingredientsResult.value.ingredients;
+      }
+      if (stepsResult.value) {
+        steps.value = stepsResult.value.recipe_steps;
+      }
+      if (RateAndCommentResult.value) {
+        ratings.value = RateAndCommentResult.value.ratings;
+        comments.value = RateAndCommentResult.value.comments;
+      }
+      if (RatingAggregateResult.value) {
+        aggregateRating.value = RatingAggregateResult.value.ratings_aggregate.aggregate.avg.rating || 0;
+      }
+    });
+  } else {
+    const { result: previewStepsResult } = usePreviewSteps(recipeId);
+    const { result: previewIngredientsResult } = usePreviewIngredients(recipeId);
+
+    watchEffect(() => {
+      if (previewIngredientsResult.value) {
+        ingredients.value = previewIngredientsResult.value.ingredients;
+      }
+      if (previewStepsResult.value) {
+        steps.value = previewStepsResult.value.recipe_steps;
+      }
+      if (RateAndCommentResult.value) {
+        ratings.value = RateAndCommentResult.value.ratings;
+        comments.value = RateAndCommentResult.value.comments;
+      }
+      if (RatingAggregateResult.value) {
+        aggregateRating.value = RatingAggregateResult.value.ratings_aggregate.aggregate.avg.rating || 0;
+      }
+    });
+  }
+} else {
+  const { result: ingredientsResult } = useRecipesIngredient(recipeId);
+  const { result: stepsResult } = useRecipesStep(recipeId);
+
+  watchEffect(() => {
+    if (ingredientsResult.value) {
+      ingredients.value = ingredientsResult.value.ingredients;
+    }
+    if (stepsResult.value) {
+      steps.value = stepsResult.value.recipe_steps;
+    }
+    if (RateAndCommentResult.value) {
+      ratings.value = RateAndCommentResult.value.ratings;
+      comments.value = RateAndCommentResult.value.comments;
+    }
+    if (RatingAggregateResult.value) {
+      aggregateRating.value = RatingAggregateResult.value.ratings_aggregate.aggregate.avg.rating || 0;
+    }
+  });
+}
 
 const reviews = computed(() => {
   const userRatings = new Map();
@@ -267,22 +330,6 @@ const reviews = computed(() => {
     const dateB = b.comment_created_at || b.created_at;
     return new Date(dateB) - new Date(dateA);
   });
-});
-
-watchEffect(() => {
-  if (ingredientsResult.value) {
-    ingredients.value = ingredientsResult.value.ingredients;
-  }
-  if (stepsResult.value) {
-    steps.value = stepsResult.value.recipe_steps;
-  }
-  if (RateAndCommentResult.value) {
-    ratings.value = RateAndCommentResult.value.ratings;
-    comments.value = RateAndCommentResult.value.comments;
-  }
-  if (RatingAggregateResult.value) {
-    aggregateRating.value = RatingAggregateResult.value.ratings_aggregate.aggregate.avg.rating || 0;
-  }
 });
 
 const currentImage = ref(0);
